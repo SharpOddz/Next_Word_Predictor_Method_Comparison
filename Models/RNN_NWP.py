@@ -90,3 +90,38 @@ train_x,train_y = generate_input_target_pairs(train_ids, sequence_length)
 val_x,val_y = generate_input_target_pairs(valid_ids, sequence_length)
 test_x,test_y = generate_input_target_pairs(test_ids, sequence_length)
 print(len(train_x))
+
+#Model Hyperparameters
+epochs = 100
+batch_size = 32
+rnn_units = 256
+
+#RNN Model Architecture
+model = keras.Sequential([
+    #Embedding layer
+    layers.Embedding(input_dim=vocab_size, output_dim=embedding_dim, input_length=sequence_length),
+    #Simple RNN layer
+    layers.SimpleRNN(units=rnn_units, return_sequences=True),
+    #Dense output layer
+    layers.Dense(units=vocab_size, activation='softmax')
+])
+
+model.compile(optimizer='adam', 
+              loss='sparse_categorical_crossentropy', 
+              metrics=['accuracy'])
+
+model.summary()
+
+#Converting train and val data into tensorflow valid data types
+train_x_np = np.array(train_x)
+train_y_np = np.array(train_y)
+val_x_np = np.array(val_x)
+val_y_np = np.array(val_y)
+
+history = model.fit(
+    x=train_x_np,
+    y=train_y_np,
+    epochs=epochs,
+    batch_size=batch_size,
+    validation_data=(val_x_np, val_y_np)
+)
