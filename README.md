@@ -1,4 +1,4 @@
-#Next Word Predictor Method Comparison 
+# Next Word Predictor Method Comparison 
 Goal of this project is to compare next word prediction performance across the following deep learning methods: Recurrent Neural Networks, LSTMS, and Transformers on the Penn Tree Bank Dataset.
 
 
