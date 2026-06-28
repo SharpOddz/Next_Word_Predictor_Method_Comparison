@@ -25,7 +25,7 @@ print("Files in dataset directory:", os.listdir(dataset_dir))
 
 #Tokenize the text
 #Every line is a sentence, so the <eos> or "." is added to the end of every sentence
-#Word Tokenization (<unk> will represent an unknown word)
+#Whole Word Tokenization (<unk> will represent an unknown word)
 def tokenize_text_path(file_path):
   if not os.path.exists(file_path):
     print(f"Warning: File not found at {file_path}")
@@ -44,7 +44,6 @@ valid_tokens = tokenize_text_path(os.path.join(dataset_dir, 'ptb.valid.txt'))
 test_tokens = tokenize_text_path(os.path.join(dataset_dir, 'ptb.test.txt'))
 #print(train_tokens)
 
-#Subword Tokenization (Will test this later to see if it improves performance)
 
 #Build Vocabulary
 #Assigning a numerical value to each unique token, <unk> is set uniquely at 0
@@ -60,9 +59,7 @@ def build_vocab(tokens, min_freq=1):
   return word_to_id,id_to_word
 
 word_to_id, id_to_word = build_vocab(train_tokens)
-#print(len(word_to_id))
-#print(word_to_id)
-#print(id_to_word)
+vocab_size = len(word_to_id)
 
 def token_to_id(tokens,word_to_id):
   return [word_to_id.get(token, 0) for token in tokens]
@@ -73,7 +70,7 @@ test_ids = token_to_id(test_tokens, word_to_id)
 #print(train_ids)
 
 #Input-Target Pairs (Fixed Sequence Length)
-#Will experiment with dynamic length chunks as well
+#Currently implemeted as fixed sequence length but will experiment with dynamic length chunks as well
 sequence_length = 25
 
 def generate_input_target_pairs(ids, sequence_length):
@@ -86,10 +83,18 @@ def generate_input_target_pairs(ids, sequence_length):
     target_sequences.append(y)
   return input_sequences, target_sequences
 
-train_x,train_y = generate_input_target_pairs(train_ids, sequence_length)
-val_x,val_y = generate_input_target_pairs(valid_ids, sequence_length)
-test_x,test_y = generate_input_target_pairs(test_ids, sequence_length)
+train_x,train_y = np.array(generate_input_target_pairs(train_ids, sequence_length))
+val_x,val_y = np.array(generate_input_target_pairs(valid_ids, sequence_length))
+test_x,test_y = np.array(generate_input_target_pairs(test_ids, sequence_length))
 print(len(train_x))
+
+#Embedding
+embedding_dim = 256# vocab_size x embedding dimension matrix
+
+#Printout of pretraining data
+print(f"Vocab Size: {vocab_size}")
+print(f"Train X Shape: {train_x.shape}")
+print(f"Train Y Shape: {train_y.shape}")
 
 #Model Hyperparameters
 epochs = 100
@@ -112,16 +117,11 @@ model.compile(optimizer='adam',
 
 model.summary()
 
-#Converting train and val data into tensorflow valid data types
-train_x_np = np.array(train_x)
-train_y_np = np.array(train_y)
-val_x_np = np.array(val_x)
-val_y_np = np.array(val_y)
-
+#Training RNN
 history = model.fit(
-    x=train_x_np,
-    y=train_y_np,
+    x=train_x,
+    y=train_y,
     epochs=epochs,
     batch_size=batch_size,
-    validation_data=(val_x_np, val_y_np)
+    validation_data=(val_x, val_y)
 )
