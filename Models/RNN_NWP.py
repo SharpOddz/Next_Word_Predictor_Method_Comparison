@@ -5,6 +5,9 @@ from tensorflow import keras
 from tensorflow.keras import layers
 from google.colab import drive
 from collections import Counter
+from tensorflow.keras import mixed_precision
+import matplotlib.pyplot as plt
+import pandas as pd
 
 #Mount Google Drive
 drive.mount('/content/drive')
@@ -50,7 +53,8 @@ test_tokens = tokenize_text_path(os.path.join(dataset_dir, 'ptb.test.txt'))
 def build_vocab(tokens, min_freq=1):
   counter = Counter(tokens)
   word_to_id = {
-      '<unk>': 0
+      '<pad>': 0,
+      '<unk>': 1
   }
   for word, count in counter.items():
     if count >= min_freq and word not in word_to_id:
@@ -61,8 +65,10 @@ def build_vocab(tokens, min_freq=1):
 word_to_id, id_to_word = build_vocab(train_tokens)
 vocab_size = len(word_to_id)
 
-def token_to_id(tokens,word_to_id):
-  return [word_to_id.get(token, 0) for token in tokens]
+PAD_ID = word_to_id['<pad>']
+UNK_ID = word_to_id['<unk>']
+def token_to_id(tokens, word_to_id):
+    return [word_to_id.get(token, UNK_ID) for token in tokens]
 
 train_ids = token_to_id(train_tokens, word_to_id)
 valid_ids = token_to_id(valid_tokens, word_to_id)
@@ -73,20 +79,28 @@ test_ids = token_to_id(test_tokens, word_to_id)
 #Currently implemeted as fixed sequence length but will experiment with dynamic length chunks as well
 sequence_length = 25
 
-def generate_input_target_pairs(ids, sequence_length):
-  input_sequences = []
-  target_sequences = []
-  for i in range(0,len(ids)-sequence_length):
-    x = ids[i:i+sequence_length]
-    y = ids[i+1:i+sequence_length+1]
-    input_sequences.append(x)
-    target_sequences.append(y)
-  return input_sequences, target_sequences
+def generate_input_target_pairs(ids, sequence_length, stride=5):
+    input_sequences = []
+    targets = []
+    for i in range(0, len(ids) - sequence_length, stride):
+        x = ids[i:i + sequence_length]
+        y = ids[i + sequence_length]
+        input_sequences.append(x)
+        targets.append(y)
+    return input_sequences, targets
 
-train_x,train_y = np.array(generate_input_target_pairs(train_ids, sequence_length))
-val_x,val_y = np.array(generate_input_target_pairs(valid_ids, sequence_length))
-test_x,test_y = np.array(generate_input_target_pairs(test_ids, sequence_length))
-print(len(train_x))
+train_x, train_y = generate_input_target_pairs(train_ids, sequence_length)
+val_x, val_y = generate_input_target_pairs(valid_ids, sequence_length)
+test_x, test_y = generate_input_target_pairs(test_ids, sequence_length)
+
+train_x = np.array(train_x, dtype=np.int32)
+train_y = np.array(train_y, dtype=np.int32)
+
+val_x = np.array(val_x, dtype=np.int32)
+val_y = np.array(val_y, dtype=np.int32)
+
+test_x = np.array(test_x, dtype=np.int32)
+test_y = np.array(test_y, dtype=np.int32)
 
 #Embedding
 embedding_dim = 256# vocab_size x embedding dimension matrix
@@ -98,30 +112,149 @@ print(f"Train Y Shape: {train_y.shape}")
 
 #Model Hyperparameters
 epochs = 100
-batch_size = 32
+batch_size = 512
 rnn_units = 256
+
+#Mixed precision for GPU speed up
+mixed_precision.set_global_policy("mixed_float16")
 
 #RNN Model Architecture
 model = keras.Sequential([
     #Embedding layer
-    layers.Embedding(input_dim=vocab_size, output_dim=embedding_dim, input_length=sequence_length),
+    layers.Embedding(input_dim=vocab_size, output_dim=embedding_dim, mask_zero=True),
     #Simple RNN layer
-    layers.SimpleRNN(units=rnn_units, return_sequences=True),
+    layers.SimpleRNN(units=rnn_units, return_sequences=False),
     #Dense output layer
-    layers.Dense(units=vocab_size, activation='softmax')
+    layers.Dense(units=vocab_size, dtype="float32")
 ])
 
-model.compile(optimizer='adam', 
-              loss='sparse_categorical_crossentropy', 
-              metrics=['accuracy'])
+model.compile(optimizer='adam',
+              loss=keras.losses.SparseCategoricalCrossentropy(from_logits=True),
+              metrics=['sparse_categorical_accuracy'],
+              steps_per_execution=25)
 
 model.summary()
 
 #Training RNN
-history = model.fit(
-    x=train_x,
-    y=train_y,
-    epochs=epochs,
-    batch_size=batch_size,
-    validation_data=(val_x, val_y)
+callbacks = [
+    keras.callbacks.EarlyStopping(
+        monitor='val_loss',
+        patience=5,
+        restore_best_weights=True
+    )
+    ,
+    keras.callbacks.ReduceLROnPlateau(
+        monitor='val_loss',
+        factor=0.5,
+        patience=2,
+        min_lr=1e-5
+    )
+]
+
+#Speed Optimization
+AUTOTUNE = tf.data.AUTOTUNE
+
+train_ds = (
+    tf.data.Dataset.from_tensor_slices((train_x, train_y))
+    .cache()
+    .shuffle(10000)
+    .batch(batch_size, drop_remainder=True)
+    .prefetch(AUTOTUNE)
 )
+
+val_ds = (
+    tf.data.Dataset.from_tensor_slices((val_x, val_y))
+    .cache()
+    .batch(batch_size)
+    .prefetch(AUTOTUNE)
+)
+
+#Train model
+history = model.fit(
+    train_ds,
+    epochs=epochs,
+    validation_data=val_ds,
+    callbacks=callbacks
+)
+
+#Training and val loss and acc plot
+pd.DataFrame(history.history).plot(
+    figsize=(10, 6),
+    secondary_y=['loss', 'val_loss'],
+    title='Model Metrics over Epochs',
+    grid=True
+)
+
+plt.xlabel('Epoch')
+plt.show()
+
+test_ds = (
+    tf.data.Dataset.from_tensor_slices((test_x, test_y))
+    .batch(batch_size)
+    .prefetch(tf.data.AUTOTUNE)
+)
+
+test_loss, test_acc = model.evaluate(test_ds)
+test_perplexity = np.exp(test_loss)
+
+print(f"Test Loss: {test_loss:.4f}")
+print(f"Test Accuracy: {test_acc:.4f}")
+print(f"Test Perplexity: {test_perplexity:.2f}")
+
+#Save the model to Google Drive
+model_save_path = '/content/drive/MyDrive/ptb_rnn_model.keras'
+model.save(model_save_path)
+print(f"Model successfully saved to {model_save_path}")
+
+"""
+Next Word Prediction
+You can run this without the model training (load in from google drive), but the vocab part still needs to be built before it can run
+"""
+
+#Check if model is already loaded, otherwise load from Drive
+try:
+    model
+except NameError:
+    model_save_path = '/content/drive/MyDrive/ptb_rnn_model.keras'
+    if os.path.exists(model_save_path):
+        print(f"Loading model from {model_save_path}...")
+        model = keras.models.load_model(model_save_path)
+    else:
+        raise FileNotFoundError(f"Model not found at {model_save_path}. Please train and save the model first.")
+
+PAD_ID = word_to_id['<pad>']
+UNK_ID = word_to_id['<unk>']
+
+def predict_next_word(model, text, word_to_id, id_to_word, sequence_length, top_k=5):
+    tokens = text.lower().strip().split()
+    ids = [word_to_id.get(token, UNK_ID) for token in tokens]
+    #Padding if input sequence is less than the sequence length (25)
+    if len(ids) < sequence_length:
+        ids = [PAD_ID] * (sequence_length - len(ids)) + ids
+    else:
+        ids = ids[-sequence_length:]
+
+    x = np.array([ids], dtype=np.int32)
+    predictions = model.predict(x, verbose=0)
+    next_word_logits = predictions[0]
+    #Getting the probabilites of the top 5 predicted words
+    probs = tf.nn.softmax(next_word_logits).numpy()
+    top_indices = np.argsort(probs)[-top_k:][::-1]
+    results = []
+    for idx in top_indices:
+        results.append((id_to_word[idx], probs[idx]))
+
+    return results
+
+#Length of the prediction sequence can be any length between 1-25 (It will pad if less than 25)
+top_predictions = predict_next_word(
+    model,
+    "the only thing i would definitely add is saving the vocabulary along with",
+    word_to_id,
+    id_to_word,
+    sequence_length
+)
+
+for word, prob in top_predictions:
+    print(f"{word}: {prob:.4f}")
+
