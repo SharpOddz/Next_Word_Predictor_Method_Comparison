@@ -76,7 +76,7 @@ test_ids = token_to_id(test_tokens, word_to_id)
 #Currently implemeted as fixed sequence length but will experiment with dynamic length chunks as well
 sequence_length = 25
 
-def generate_input_target_pairs(ids, sequence_length, stride=5):
+def generate_input_target_pairs(ids, sequence_length, stride=1):
     input_sequences = []
     targets = []
     for i in range(0, len(ids) - sequence_length, stride):
