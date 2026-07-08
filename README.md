@@ -10,10 +10,13 @@ The embedding dimension is 256, stride=1 for all methods types compared
 ### RNN Results 
 
 #### RNN Word-level Tokenizer Results*
-*It used stride=5, will re-run with stride=1
-Test Loss: 5.5466
-Test Accuracy: 0.1863
-Test Perplexity: 256.37
+*This model run used stride=5, will need to re-run with stride=1 to stay in line with the other methods compared
+
+| Metric | Score |
+| :---: | :---: | 
+| Test Loss | 5.5466 |
+| Test Accuracy | 0.1863 |
+| Test Perplexity | 256.37 |
 
 Example Predictions (These sentences don't have a defined next word, not part of the test set): 
 | Input Sequence | Model Predicted Next Word |
