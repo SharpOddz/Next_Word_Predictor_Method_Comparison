@@ -5,11 +5,12 @@ Goal of this project is to compare next word prediction performance across the f
 ### Recurrent Neural Network
 Will compare different types of RNNs: word-level tokenization vs subword-level tokenization vs character-level tokenization.
 
-The embedding dimension is set to 256 for all RNN types compared. 
+The embedding dimension is 256, stride=1 for all methods types compared
 
 ### RNN Results 
 
-#### RNN Word-level Tokenizer Results
+#### RNN Word-level Tokenizer Results*
+*It used stride=5, will re-run with stride=1
 Test Loss: 5.5466
 Test Accuracy: 0.1863
 Test Perplexity: 256.37
