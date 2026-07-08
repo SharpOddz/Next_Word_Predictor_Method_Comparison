@@ -34,8 +34,8 @@ Test Perplexity: 127.90
 | Input Sequence | Model Predicted Next Word |
 | :---: | :---: | 
 | "the only thing i would definitely add is saving the vocabulary along with" | "the" | 
-| "goal of this project is to compare next word prediction performance across the following deep learning" | "<eos>" (end of sentence) | 
-| "the final hidden state is a mix of old memory and new memory" | "<eos>" (end of sentence) | 
+| "goal of this project is to compare next word prediction performance across the following deep learning" | <eos> (end of sentence) | 
+| "the final hidden state is a mix of old memory and new memory" | <eos> (end of sentence) | 
 
 <img width="867" height="528" alt="image" src="https://github.com/user-attachments/assets/0ff66830-13bc-4070-90c3-df3f76c07ae6" />
 
