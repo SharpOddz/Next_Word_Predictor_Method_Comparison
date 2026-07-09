@@ -7,7 +7,7 @@ Will compare different types of RNNs: word-level tokenization vs subword-level t
 
 The embedding dimension is 256, stride=1 for all methods types compared
 
-### RNN Results 
+### Recurrent Neural Network (RNN) Results 
 
 #### RNN Word-level Tokenizer Results*
 *This model run used stride=5, will need to re-run with stride=1 to stay in line with the other methods compared
@@ -29,7 +29,7 @@ Example Predictions (These sentences don't have a defined next word, not part of
 
 
 
-### GRU Results 
+### Gated Recurrent Units (GRU) Results 
 
 #### GRU Word-level Tokenizer Results
 
@@ -48,5 +48,23 @@ Example Predictions (These sentences don't have a defined next word, not part of
 
 <img width="867" height="528" alt="image" src="https://github.com/user-attachments/assets/0ff66830-13bc-4070-90c3-df3f76c07ae6" />
 
+### Long Short Term Memory Model (LSTM) Results 
+
+#### LSTM Word-level Tokenizer Results
+
+| Metric | Score |
+| :---: | :---: | 
+| Test Loss | 4.9125 |
+| Test Accuracy | 0.2295 |
+| Test Perplexity | 135.97 |
+
+Example Predictions (These sentences don't have a defined next word, not part of the test set): 
+| Input Sequence | Model Predicted Next Word |
+| :---: | :---: | 
+| "the only thing i would definitely add is saving the vocabulary along with" | "the" | 
+| "goal of this project is to compare next word prediction performance across the following deep learning" | <eos> (end of sentence) | 
+| "the final hidden state is a mix of old memory and new memory" | <eos> (end of sentence) | 
+
+<img width="875" height="528" alt="image" src="https://github.com/user-attachments/assets/08cb735e-7359-4b99-b61a-d4d8e206a5ad" />
 
 
