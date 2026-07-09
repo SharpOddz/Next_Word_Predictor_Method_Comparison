@@ -51,12 +51,13 @@ Example Predictions (These sentences don't have a defined next word, not part of
 ### Long Short Term Memory Model (LSTM) Results 
 
 #### LSTM Word-level Tokenizer Results
+This model utilizes dropout as a regularization technique
 
 | Metric | Score |
 | :---: | :---: | 
-| Test Loss | 4.9125 |
-| Test Accuracy | 0.2295 |
-| Test Perplexity | 135.97 |
+| Test Loss | 4.8680 |
+| Test Accuracy | 0.2324 |
+| Test Perplexity | 130.06 |
 
 Example Predictions (These sentences don't have a defined next word, not part of the test set): 
 | Input Sequence | Model Predicted Next Word |
