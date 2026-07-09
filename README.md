@@ -66,6 +66,6 @@ Example Predictions (These sentences don't have a defined next word, not part of
 | "goal of this project is to compare next word prediction performance across the following deep learning" | <eos> (end of sentence) | 
 | "the final hidden state is a mix of old memory and new memory" | <eos> (end of sentence) | 
 
-<img width="875" height="528" alt="image" src="https://github.com/user-attachments/assets/08cb735e-7359-4b99-b61a-d4d8e206a5ad" />
+<img width="875" height="528" alt="image" src="https://github.com/user-attachments/assets/bc87e5d3-8158-43c4-9de2-3c1cce1166aa" />
 
 
